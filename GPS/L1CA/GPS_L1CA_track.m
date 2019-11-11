@@ -7,9 +7,10 @@ classdef GPS_L1CA_track < handle
         logID           %日志文件ID
         PRN             %卫星编号
         code            %C/A码
-        timeIntMs       %积分时间，ms
+        timeIntMs       %积分时间，ms (1,2,4,5,10,20)
         timeIntS        %积分时间，s
         codeInt         %积分时间内码片个数
+        pointInt        %一个比特有多少个积分点，一个比特20ms
         trackDataTail   %跟踪开始点在数据缓存中的位置
         blkSize         %跟踪数据段采样点个数
         trackDataHead   %跟踪结束点在数据缓存中的位置
@@ -50,6 +51,7 @@ classdef GPS_L1CA_track < handle
             obj.timeIntMs = 1;
             obj.timeIntS = 0.001;
             obj.codeInt = 1023;
+            obj.pointInt = 20;
             obj.trackDataTail = obj.sampleFreq*0.001 - acqResult(1) + 2;
             obj.blkSize = obj.sampleFreq*0.001;
             obj.trackDataHead = obj.trackDataTail + obj.blkSize - 1;
@@ -94,9 +96,9 @@ classdef GPS_L1CA_track < handle
             obj.remCarrPhase = mod(theta_next, 1); %剩余载波相位，周
             %----生成本地码
             tcode = obj.remCodePhase + obj.codeNco*t + 2; %加2保证求滞后码时大于1
-            earlyCode  = obj.code(floor(tcode+0.5)); %超前码
+            earlyCode  = obj.code(floor(tcode+0.25)); %超前码
             promptCode = obj.code(floor(tcode));     %即时码
-            lateCode   = obj.code(floor(tcode-0.5)); %滞后码
+            lateCode   = obj.code(floor(tcode-0.25)); %滞后码
             obj.remCodePhase = obj.remCodePhase + obj.codeNco*te - obj.codeInt; %剩余载波相位，周
             %----原始数据乘载波
             iBasebandSignal = rawSignal(1,:).*carr_cos + rawSignal(2,:).*carr_sin; %乘负载波
@@ -111,7 +113,7 @@ classdef GPS_L1CA_track < handle
             %----码鉴相器
             S_E = sqrt(I_E^2+Q_E^2);
             S_L = sqrt(I_L^2+Q_L^2);
-            codeError = 0.5 * (S_E-S_L)/(S_E+S_L); %单位：码片
+            codeError = 0.75 * (S_E-S_L)/(S_E+S_L); %单位：码片
             %----载波鉴相器
             carrError = atan(Q_P/I_P) / (2*pi); %单位：周
             %----鉴频器
@@ -126,10 +128,10 @@ classdef GPS_L1CA_track < handle
                 obj.carrNco = obj.FLL.Int;
                 obj.carrFreq = obj.FLL.Int;
                 obj.trackCnt = obj.trackCnt + 1;
-                if obj.trackCnt==500
+                if obj.trackCnt==200
                     obj.trackCnt = 0;
                     obj.PLL.Int = obj.FLL.Int; %初始化锁相环积分器
-                    obj.PLLFlag = 1; %500ms后转到锁相环跟踪
+                    obj.PLLFlag = 1; %200ms后转到锁相环跟踪
                     fprintf(obj.logID, '%2d: Start PLL tracking at %.8fs\r\n', ...
                     obj.PRN, obj.dataIndex/obj.sampleFreq);
                 end

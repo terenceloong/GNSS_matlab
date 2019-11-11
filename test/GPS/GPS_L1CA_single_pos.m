@@ -1,10 +1,4 @@
-% 提前给定捕获结果，验证指定文件北斗B1C信号定位性能
-% 如果时钟不反馈修正，钟差发散，钟频差常值
-% 如果只修钟频，钟频差为0，钟差在短时间应该不飘，要是飘了，说明钟频差算的不对
-% 钟差、钟频差全修，钟差和钟频差都是0
-% 钟频差对载波多普勒测量的影响主要来源于下变频时频率的偏移，而不是跟踪阶段采样频率不准引起的本地载波频率误差
-% 对于3e-9的钟频差，1575.42e6Hz载波下变频频率偏移约4.73Hz
-% 对于生成3kHz的本地载波，采样频率误差引起的本地载波测量误差约为1e-5Hz，可以忽略不计
+% 提前给定捕获结果，验证指定文件GPS L1CA信号定位性能
 
 clear
 clc
@@ -37,26 +31,26 @@ buffHead = 0;                        %最新数据的序号，buffBlkSize的倍数
 
 %% 获取文件时间
 tf = sscanf(data_file((end-22):(end-8)), '%4d%02d%02d_%02d%02d%02d')'; %数据文件开始采样时间（日期时间数组）
-[tw, ts] = BDS_time(tf); %tw：BDT周数，ts：BDT周内秒数
+[tw, ts] = GPS_time(tf); %tw：GPS周数，ts：GPS周内秒数
 ta = [ts,0,0] + sample2dt(sample_offset, sampleFreq); %初始化接收机时间（周内秒数），[s,ms,us]
 ta = time_carry(round(ta,2)); %取整
 
 %% 卫星列表
-svList = [19;20;22;36;37;38];
+svList = [10;13;15;20;21;24];
 svN = length(svList);
 
 %% 为每颗可能见到的卫星分配跟踪通道
 channels = cell(svN,1); %创建cell
 for k=1:svN %创建跟踪通道对象
-    channels{k} = BDS_B1C_channel(sampleFreq, buffSize, svList(k), logID);
+    channels{k} = GPS_L1CA_channel(sampleFreq, buffSize, svList(k), logID);
 end
 % 根据捕获结果初始化通道
-channels{1}.init([14319, -200], 0);
-channels{2}.init([19294,-2450], 0);
-channels{3}.init([29616, 2300], 0);
-channels{4}.init([13406, 3300], 0);
-channels{5}.init([15648,-2100], 0);
-channels{6}.init([27633,-1900], 0);
+channels{1}.init([2947, 3250], 0);
+channels{2}.init([2704,-2750], 0);
+channels{3}.init([2341,-1250], 0);
+channels{4}.init([2772, 2250], 0);
+channels{5}.init([2621, -750], 0);
+channels{6}.init([1384, 2000], 0);
 
 %% 创建跟踪结果存储空间
 trackResults = repmat(trackResult_struct(msToProcess), svN,1);
@@ -131,7 +125,7 @@ for t=1:msToProcess
                 else
                     [I_Q, disc] = channels{k}.track([buff(:,trackDataTail:end),buff(:,1:trackDataHead)]);
                 end
-                channels{k}.parse(ta); %可以注释掉，只跟踪不解析
+                channels{k}.parse; %可以注释掉，只跟踪不解析
                 % 存跟踪结果（跟踪结果）
                 trackResults(k).I_Q(n,:)          = I_Q;
                 trackResults(k).disc(n,:)         = disc;
@@ -153,12 +147,12 @@ for t=1:msToProcess
                 dtc = dn / sampleFreq0; %当前采样时间与跟踪点的时间差
                 dt = dtc - dtp; %定位点到跟踪点的时间差
                 carrFreq = channels{k}.carrFreq + 1575.42e6*deltaFreq; %修正后的载波频率
-                codeFreq = (carrFreq/1575.42e6+1)*2.046e6; %通过载波频率计算的码频率
+                codeFreq = (carrFreq/1575.42e6+1)*1.023e6; %通过载波频率计算的码频率
                 codePhase = channels{k}.remCodePhase + dt*codeFreq; %定位点码相位
-                ts0 = [floor(channels{k}.ts0/1e3), mod(channels{k}.ts0,1e3), 0] + [0, floor(codePhase/2046), mod(codePhase/2046,1)*1e3]; %定位点的码发射时间
-                [sv(k,:),~] = BDS_CNAV1_ephemeris_rho(channels{k}.ephemeris, tp, ts0); %根据星历计算卫星[位置、伪距、速度]
+                ts0 = [floor(channels{k}.ts0/1e3), mod(channels{k}.ts0,1e3), 0] + [0, floor(codePhase/1023), mod(codePhase/1023,1)*1e3]; %定位点的码发射时间
+                [sv(k,:),~] = GPS_L1CA_ephemeris_rho(channels{k}.ephemeris, tp, ts0); %根据星历计算卫星[位置、伪距、速度]
                 sv(k,8) = -carrFreq/1575.42e6*299792458; %载波频率转化为速度
-                sv(k,8) = sv(k,8) + channels{k}.ephemeris(26)*299792458; %修卫星钟频差，卫星钟快测的伪距率偏小
+                sv(k,8) = sv(k,8) + channels{k}.ephemeris(9)*299792458; %修卫星钟频差，卫星钟快测的伪距率偏小
                 R(k) = channels{k}.varCode.D;
             end
         end
@@ -260,9 +254,8 @@ for k=1:svN
     grid(ax5,'on');
     
     % 画图
-    plot(ax1, trackResults(k).I_Q(1001:end,7),trackResults(k).I_Q(1001:end,8), 'LineStyle','none', 'Marker','.') %I/Q图
-    plot(ax2, trackResults(k).dataIndex/sampleFreq, trackResults(k).I_Q(:,8)) %Q
-    plot(ax2, trackResults(k).dataIndex/sampleFreq, trackResults(k).I_Q(:,7)) %I
+    plot(ax1, trackResults(k).I_Q(1001:end,1),trackResults(k).I_Q(1001:end,4), 'LineStyle','none', 'Marker','.') %I/Q图
+    plot(ax2, trackResults(k).dataIndex/sampleFreq, trackResults(k).I_Q(:,1))
     plot(ax4, trackResults(k).dataIndex/sampleFreq, trackResults(k).carrFreq, 'LineWidth',1.5) %载波频率
     
     % 调整坐标轴
@@ -286,8 +279,8 @@ function trackResult = trackResult_struct(m)
     trackResult.codeFreq      = zeros(m,1); %码频率
     trackResult.remCarrPhase  = zeros(m,1); %码周期开始采样点的载波相位，周
     trackResult.carrFreq      = zeros(m,1); %载波频率
-    trackResult.I_Q           = zeros(m,8); %[I_P,I_E,I_L,Q_P,Q_E,Q_L, I,Q]
-    trackResult.disc          = zeros(m,2); %鉴相器输出
+    trackResult.I_Q           = zeros(m,6); %[I_P,I_E,I_L,Q_P,Q_E,Q_L]
+    trackResult.disc          = zeros(m,3); %鉴相器输出
     trackResult.std           = zeros(m,2); %鉴相器输出标准差
 end
 

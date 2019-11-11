@@ -18,7 +18,7 @@ log_file = [curr_path,'\log.txt']; %日志文件
 logID = fopen(log_file, 'w'); %在当前代码路径下创建日志文件（时间顺序的日志）
 
 %% 运行时间
-msToProcess = 20*1*1000; %处理总时间
+msToProcess = 600*1*1000; %处理总时间
 sample_offset = 0*4e6; %抛弃前多少个采样点
 sampleFreq = 4e6; %接收机采样频率
 
@@ -116,7 +116,7 @@ for t=1:msToProcess
                 else
                     [I_Q, disc] = channels{k}.track([buff(:,trackDataTail:end),buff(:,1:trackDataHead)]);
                 end
-                channels{k}.parse(ta); %可以注释掉，只跟踪不解析
+                channels{k}.parse; %可以注释掉，只跟踪不解析
                 % 存跟踪结果（跟踪结果）
                 trackResults(k).I_Q(n,:)          = I_Q;
                 trackResults(k).disc(n,:)         = disc;
