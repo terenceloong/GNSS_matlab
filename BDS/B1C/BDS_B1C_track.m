@@ -28,7 +28,7 @@ classdef BDS_B1C_track < handle
         DLL             %延迟锁定环
         I               %导频分量积分结果
         Q               %数据分量积分结果
-        PLLFlag         %PLL模式标志，0标志180度相位模糊，1表示纯锁相环
+        PLLFlag         %PLL模式标志，0表示180度相位模糊，1表示纯锁相环
         subPhase        %子码相位
         ts0             %当前伪码周期的开始时间，ms
         varCode         %码鉴相器方差统计
