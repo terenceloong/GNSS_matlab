@@ -1,10 +1,11 @@
 % 提前给定捕获结果，验证指定文件GPS L1CA信号定位性能
+% 定位时间间隔会影响定位噪声特性
 
 clear
 clc
 
 %% 数据文件
-data_file = 'E:\GNSS data\B210_20190726_205109_ch1.dat';
+data_file = 'E:\GNSS data\B210_20190726_205109_ch2.dat';
 
 %% 计时开始
 tic
@@ -17,7 +18,7 @@ log_file = [curr_path,'\log.txt']; %日志文件
 logID = fopen(log_file, 'w'); %在当前代码路径下创建日志文件（时间顺序的日志）
 
 %% 运行时间
-msToProcess = 60*1*1000; %处理总时间
+msToProcess = 200*1*1000; %处理总时间
 sample_offset = 0*4e6; %抛弃前多少个采样点
 sampleFreq = 4e6; %接收机采样频率
 
@@ -37,6 +38,7 @@ ta = time_carry(round(ta,2)); %取整
 
 %% 卫星列表
 svList = [10;13;15;20;21;24];
+% svList = [13;15;20;21;24];
 svN = length(svList);
 
 %% 为每颗可能见到的卫星分配跟踪通道
@@ -51,6 +53,12 @@ channels{3}.init([2341,-1250], 0);
 channels{4}.init([2772, 2250], 0);
 channels{5}.init([2621, -750], 0);
 channels{6}.init([1384, 2000], 0);
+
+% channels{1}.init([2704,-2750], 0);
+% channels{2}.init([2341,-1250], 0);
+% channels{3}.init([2772, 2250], 0);
+% channels{4}.init([2621, -750], 0);
+% channels{5}.init([1384, 2000], 0);
 
 %% 创建跟踪结果存储空间
 trackResults = repmat(trackResult_struct(msToProcess), svN,1);
@@ -117,7 +125,7 @@ for t=1:msToProcess
                 trackResults(k).remCarrPhase(n,:) = channels{k}.remCarrPhase;
                 trackResults(k).carrFreq(n,:)     = channels{k}.carrFreq;
                 % 基带处理
-                channels{k}.set_sampleFreq(sampleFreq0); %更新通道采样频率
+                channels{k}.set_deltaFreq(deltaFreq); %更新通道频率误差，保证采样频率是准的
                 trackDataHead = channels{k}.trackDataHead;
                 trackDataTail = channels{k}.trackDataTail;
                 if trackDataHead>trackDataTail
@@ -146,12 +154,10 @@ for t=1:msToProcess
                 dn = mod(buffHead-channels{k}.trackDataTail+1, buffSize) - 1; %trackDataTail恰好超前buffHead一个时，dn=-1
                 dtc = dn / sampleFreq0; %当前采样时间与跟踪点的时间差
                 dt = dtc - dtp; %定位点到跟踪点的时间差
-                carrFreq = channels{k}.carrFreq + 1575.42e6*deltaFreq; %修正后的载波频率
-                codeFreq = (carrFreq/1575.42e6+1)*1.023e6; %通过载波频率计算的码频率
-                codePhase = channels{k}.remCodePhase + dt*codeFreq; %定位点码相位
+                codePhase = channels{k}.remCodePhase + dt*channels{k}.codeFreq; %定位点码相位
                 ts0 = [floor(channels{k}.ts0/1e3), mod(channels{k}.ts0,1e3), 0] + [0, floor(codePhase/1023), mod(codePhase/1023,1)*1e3]; %定位点的码发射时间
                 [sv(k,:),~] = GPS_L1CA_ephemeris_rho(channels{k}.ephemeris, tp, ts0); %根据星历计算卫星[位置、伪距、速度]
-                sv(k,8) = -carrFreq/1575.42e6*299792458; %载波频率转化为速度
+                sv(k,8) = -(channels{k}.carrFreq/1575.42e6 + deltaFreq) * 299792458; %载波频率转化为速度
                 sv(k,8) = sv(k,8) + channels{k}.ephemeris(9)*299792458; %修卫星钟频差，卫星钟快测的伪距率偏小
                 R(k) = channels{k}.varCode.D;
             end
@@ -166,7 +172,6 @@ for t=1:msToProcess
             ta = ta - sec2smu(10*pos(7)*dtpos/1000); %时钟修正（可以不用进位，在下次更新时进位）
         end
         % 4.存储输出
-%         output_ta(no,1)   = ta(1) + ta(2)/1e3 + ta(3)/1e6; %时间戳，s
         output_ta(no,1)   = tp(1) + tp(2)/1e3 + tp(3)/1e6; %时间戳，s
         output_ta(no,2)   = receiverState; %接收机状态
         output_pos(no,:)  = pos;
