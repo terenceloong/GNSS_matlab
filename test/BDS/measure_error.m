@@ -9,6 +9,7 @@ sv_info = evalin('base', 'output_sv(:,1:8,:)'); %卫星信息，[x,y,z, rho, vx,vy,vz
 
 %% 参考坐标
 p0 = [45.73105, 126.62487, 207];
+% p0 = [45.74427, 126.6262, 170];
 rp = lla2ecef(p0); %ecef
 Cen = dcmecef2ned(p0(1), p0(2));
 
