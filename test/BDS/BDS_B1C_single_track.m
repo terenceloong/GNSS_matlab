@@ -6,7 +6,8 @@ clear
 clc
 
 %% 数据文件
-data_file = 'E:\GNSS data\B210_20190726_205109_ch1.dat';
+% data_file = 'E:\GNSS data\B210_20190726_205109_ch1.dat'; %---
+data_file = 'E:\GNSS data\0823\B210_20190823_194010_ch1.dat';
 
 %% 计时开始
 tic
@@ -39,7 +40,8 @@ ta = time_carry(round(ta,2)); %取整
 
 %% 卫星列表
 svList = 19;
-% svList = [19;20;22;36;37;38];
+% svList = [19;20;22;36;37;38]; %---
+% svList = [19;21;22;34;36;38];
 svN = length(svList);
 
 %% 为每颗可能见到的卫星分配跟踪通道
@@ -48,19 +50,26 @@ for k=1:svN %创建跟踪通道对象
     channels{k} = BDS_B1C_channel(sampleFreq, buffSize, svList(k), logID);
 end
 % 根据捕获结果初始化通道
-% channels{1}.init([14319, -200], 0);
+% channels{1}.init([14319, -200], 0); %---
 % channels{2}.init([19294,-2450], 0);
 % channels{3}.init([29616, 2300], 0);
 % channels{4}.init([13406, 3300], 0);
 % channels{5}.init([15648,-2100], 0);
 % channels{6}.init([27633,-1900], 0);
 
-channels{1}.init([14319, -200], 0); %同相
+% channels{1}.init([14319, -200], 0); %同相 %---
 % channels{1}.init([19294,-2450], 0); %反向
 % channels{1}.init([29616, 2300], 0);
 % channels{1}.init([13406, 3300], 0);
 % channels{1}.init([15648,-2100], 0);
 % channels{1}.init([27633,-1900], 0);
+
+channels{1}.init([33752,-1100], 0);
+% channels{2}.init([10955, 3000], 0);
+% channels{3}.init([25754, 1800], 0);
+% channels{4}.init([10908, -450], 0);
+% channels{5}.init([15321, 2550], 0);
+% channels{6}.init([39262,-2050], 0);
 
 %% 创建跟踪结果存储空间
 trackResults = repmat(trackResult_struct(msToProcess), svN,1);
@@ -117,7 +126,7 @@ for t=1:msToProcess
                 else
                     [I_Q, disc] = channels{k}.track([buff(:,trackDataTail:end),buff(:,1:trackDataHead)]);
                 end
-                channels{k}.parse(ta); %可以注释掉，只跟踪不解析
+                channels{k}.parse; %可以注释掉，只跟踪不解析
                 % 存跟踪结果（跟踪结果）
                 trackResults(k).I_Q(n,:)          = I_Q;
                 trackResults(k).disc(n,:)         = disc;

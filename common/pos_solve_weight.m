@@ -20,7 +20,7 @@ V = sv(:,8); %rhodot, m/s
 x0 = [0;0;0;0];
 % S = zeros(n,1);
 
-% cnt = 0;
+cnt = 0;
 while 1
 %     for k=1:n
 %         G(k,1:3) = sv(k,1:3)-x0(1:3)';
@@ -33,11 +33,12 @@ while 1
         G(:,1:3) = G1;
         S = sum(G1.*sv(:,1:3), 2);
     x = (G'*W*G)\G'*W*(S-R);
-%     cnt = cnt+1;
+    cnt = cnt+1;
 %     if cnt == 10
 %         error('Position iteration exceeds the threshold!');
 %     end
-    if norm(x-x0)<1e-3
+    if norm(x-x0)<1e-3 || cnt==20
+%     if norm(x-x0)<1e-3
         break
     end
     x0 = x;

@@ -1,8 +1,11 @@
-function [ephemeris, sf3] = BDS_CNAV1_ephemeris_parse(data)
+function [ephemeris, sf3, SOH] = BDS_CNAV1_ephemeris_parse(data)
 % B-CNAV1星历解析
 % sf3为子帧3，对于不同的页面类型结构不一样
 % 星历下载：http://www.csno-tarc.cn/support/downloads
 % 网上的星历是B1I上发的，B1C上发的星历跟它对不上，钟差参数能对上
+
+subFrame1 = dec2bin(double(data(1:72)>0))'; %子帧1，二进制01字符串
+SOH = bin2dec(subFrame1(22:29)) * 18; %小时内秒数
 
 % 解交织
 frame = double(data>0); %±1转换成01

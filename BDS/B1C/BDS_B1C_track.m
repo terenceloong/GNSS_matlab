@@ -4,7 +4,8 @@ classdef BDS_B1C_track < handle
 
     % 只有类成员可以修改属性值
     properties (GetAccess = public, SetAccess = private)
-        sampleFreq      %采样频率
+        sampleFreq      %标称采样频率
+        deltaFreq       %频率误差
         buffSize        %采样缓冲区大小
         logID           %日志文件ID
         PRN             %卫星编号
@@ -48,6 +49,7 @@ classdef BDS_B1C_track < handle
         function init(obj, acqResult, n)
             % acqResult为捕获结果，第一个数为码相位，第二个数为载波频率
             % n为已经过了多少个采样点
+            obj.deltaFreq = 0;
             code = BDS_B1C_code_data(obj.PRN);
             code = reshape([code;-code],10230*2,1);
             obj.codeData = [code(end);code;code(1)]; %列向量
@@ -68,11 +70,11 @@ classdef BDS_B1C_track < handle
             obj.codeFreq = obj.codeNco;
             obj.remCarrPhase = 0;
             obj.remCodePhase = 0;
-            [K1, K2] = orderTwoLoopCoef(25, 0.707, 1);
+            [K1, K2] = orderTwoLoopCoefDisc(25, 0.707, obj.timeIntS);
             obj.PLL.K1 = K1;
             obj.PLL.K2 = K2;
             obj.PLL.Int = obj.carrNco;
-            [K1, K2] = orderTwoLoopCoef(2, 0.707, 1);
+            [K1, K2] = orderTwoLoopCoefDisc(2, 0.707, obj.timeIntS);
             obj.DLL.K1 = K1;
             obj.DLL.K2 = K2;
             obj.DLL.Int = obj.codeNco;
@@ -87,11 +89,13 @@ classdef BDS_B1C_track < handle
         
         %% 跟踪
         function [I_Q, disc] = track(obj, rawSignal)
+            %----真实采样频率
+            sampleFreq0 = obj.sampleFreq * (1+obj.deltaFreq);
             %----更新跟踪开始点在文件中的位置（下次跟踪）
             obj.dataIndex = obj.dataIndex + obj.blkSize;
             %----时间序列
-            t = (0:obj.blkSize-1) / obj.sampleFreq;
-            te = obj.blkSize / obj.sampleFreq;
+            t = (0:obj.blkSize-1) / sampleFreq0;
+            te = obj.blkSize / sampleFreq0;
             %----生成本地载波
             theta = (obj.remCarrPhase + obj.carrNco*t) * 2; %乘2因为后面是以pi为单位求三角函数
             carr_cos = cospi(theta); %本地载波
@@ -119,6 +123,11 @@ classdef BDS_B1C_track < handle
             Q_L = qBasebandSignal * lateCodeQ;
             obj.I = -qBasebandSignal * promptCodeI; %数据分量，幅值比1:sqrt(29/11)，1:624
             obj.Q = I_P;                            %导频分量
+            %----超超前和超滞后码，用来验证是否正确锁定峰
+%             earlyearlyCodeQ  = obj.codePilot(floor(tcode+0.6));
+%             latelateCodeQ    = obj.codePilot(floor(tcode-0.6));
+%             I_EE = iBasebandSignal * earlyearlyCodeQ;
+%             I_LL = iBasebandSignal * latelateCodeQ;
             %----码鉴相器
             S_E = sqrt(I_E^2+Q_E^2);
             S_L = sqrt(I_L^2+Q_L^2);
@@ -131,11 +140,11 @@ classdef BDS_B1C_track < handle
                 carrError = atan2(Q_P*s,I_P*s) / (2*pi); %单位：周
             end
             %----PLL
-            obj.PLL.Int = obj.PLL.Int + obj.PLL.K2*carrError*obj.timeIntS; %锁相环积分器
+            obj.PLL.Int = obj.PLL.Int + obj.PLL.K2*carrError; %锁相环积分器
             obj.carrNco = obj.PLL.Int + obj.PLL.K1*carrError;
             obj.carrFreq = obj.PLL.Int;
             %----DLL
-            obj.DLL.Int = obj.DLL.Int + obj.DLL.K2*codeError*obj.timeIntS; %延迟锁定环积分器
+            obj.DLL.Int = obj.DLL.Int + obj.DLL.K2*codeError; %延迟锁定环积分器
             obj.codeNco = obj.DLL.Int + obj.DLL.K1*codeError;
             obj.codeFreq = obj.DLL.Int;
             %----更新目标码相位、导频子码相位、伪码周期时间
@@ -151,13 +160,14 @@ classdef BDS_B1C_track < handle
             if obj.trackDataTail>obj.buffSize
                 obj.trackDataTail = 1;
             end
-            obj.blkSize = ceil((obj.codeTarget-obj.remCodePhase)/obj.codeNco*obj.sampleFreq);
+            obj.blkSize = ceil((obj.codeTarget-obj.remCodePhase)/obj.codeNco*sampleFreq0);
             obj.trackDataHead = obj.trackDataTail + obj.blkSize - 1;
             if obj.trackDataHead>obj.buffSize
                 obj.trackDataHead = obj.trackDataHead - obj.buffSize;
             end
             %----输出
             I_Q = [I_P, I_E, I_L, Q_P, Q_E, Q_L, obj.I, obj.Q];
+%             I_Q = [I_EE, I_E, I_P, I_L, I_LL, Q_L, obj.I, obj.Q];
             disc = [codeError/2, carrError]; %码相位误差除以2，换算成主码相位误差
             %----统计鉴相器输出方差
             obj.varCode.update(codeError/2);
@@ -178,9 +188,9 @@ classdef BDS_B1C_track < handle
             obj.ts0 = ts0;
         end
         
-        %% 设置采样频率
-        function set_sampleFreq(obj, sampleFreq)
-            obj.sampleFreq = sampleFreq;
+        %% 设置频率误差
+        function set_deltaFreq(obj, deltaFreq)
+            obj.deltaFreq = deltaFreq;
         end
         
     end %end methods

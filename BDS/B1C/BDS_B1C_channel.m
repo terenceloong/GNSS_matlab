@@ -47,7 +47,7 @@ classdef BDS_B1C_channel < BDS_B1C_track
         % 比特同步过程要1s，开始帧同步要多一点时间，等待比特边界到达
         % 帧同步过程要500ms，等到下一帧开始才进入星历解析
         % 星历解析18s一次
-        function parse(obj, ta) %传入接收机时间，在帧同步时用来确定伪码周期开始时间
+        function parse(obj)
             obj.msgCnt = obj.msgCnt + 1; %计数加1
             switch obj.msgStage %I,B,W,F,H,E
                 case 'I' %<<====空闲
@@ -105,10 +105,6 @@ classdef BDS_B1C_channel < BDS_B1C_track
                             end
                             [Rmax, index] = max(abs(R)); %寻找相关结果的最大值
                             if Rmax==50 %最大相关值正确
-                                ta = ta(1)*1000 + ta(2); %当前接收机时间，ms
-                                td = (index+50) *10; %帧内ms
-                                t0 = round((ta-td)/18000); %指向最近的整18s
-                                obj.set_ts0(t0*18000+td); %设置伪码周期开始时间
                                 obj.start_pure_PLL(index+50, R(index)<0); %启动纯锁相环
                                 obj.frameBuffPoint = mod(index+49,1800); %帧缓存指针移动
                                 if obj.frameBuffPoint==0
@@ -145,11 +141,12 @@ classdef BDS_B1C_channel < BDS_B1C_track
                         obj.frameBuff(obj.frameBuffPoint) = (double(sum(obj.bitBuff)>0) - 0.5) * 2; %存储比特值，±1
                         if obj.frameBuffPoint==1800 %存了1800个比特（一帧）
                             obj.frameBuffPoint = 0;
-                            [ephemeris0, sf3] = BDS_CNAV1_ephemeris_parse(obj.frameBuff);
+                            [ephemeris0, sf3, SOH] = BDS_CNAV1_ephemeris_parse(obj.frameBuff);
                             if ~isempty(ephemeris0) %星历解析成功
                                 fprintf(obj.logID, '%2d: Ephemeris is parsed at %.8fs\r\n', ...
                                 obj.PRN, obj.dataIndex/obj.sampleFreq);
                                 obj.ephemeris = ephemeris0;
+                                obj.set_ts0((ephemeris0(2)*3600+SOH+18)*1000); %设置伪码时间
                                 obj.state = 2;
                                 if sf3.pageID==3
                                     switch sf3.BGTO(1) %设置BDT-GNSS时间同步参数

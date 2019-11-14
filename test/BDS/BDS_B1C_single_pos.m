@@ -10,7 +10,8 @@ clear
 clc
 
 %% Êı¾İÎÄ¼ş
-data_file = 'E:\GNSS data\B210_20190726_205109_ch1.dat';
+% data_file = 'E:\GNSS data\B210_20190726_205109_ch1.dat'; %---
+data_file = 'E:\GNSS data\0823\B210_20190823_194010_ch1.dat';
 
 %% ¼ÆÊ±¿ªÊ¼
 tic
@@ -42,7 +43,8 @@ ta = [ts,0,0] + sample2dt(sample_offset, sampleFreq); %³õÊ¼»¯½ÓÊÕ»úÊ±¼ä£¨ÖÜÄÚÃëÊ
 ta = time_carry(round(ta,2)); %È¡Õû
 
 %% ÎÀĞÇÁĞ±í
-svList = [19;20;22;36;37;38];
+% svList = [19;20;22;36;37;38]; %---
+svList = [19;21;22;34;36;38];
 svN = length(svList);
 
 %% ÎªÃ¿¿Å¿ÉÄÜ¼ûµ½µÄÎÀĞÇ·ÖÅä¸ú×ÙÍ¨µÀ
@@ -51,12 +53,19 @@ for k=1:svN %´´½¨¸ú×ÙÍ¨µÀ¶ÔÏó
     channels{k} = BDS_B1C_channel(sampleFreq, buffSize, svList(k), logID);
 end
 % ¸ù¾İ²¶»ñ½á¹û³õÊ¼»¯Í¨µÀ
-channels{1}.init([14319, -200], 0);
-channels{2}.init([19294,-2450], 0);
-channels{3}.init([29616, 2300], 0);
-channels{4}.init([13406, 3300], 0);
-channels{5}.init([15648,-2100], 0);
-channels{6}.init([27633,-1900], 0);
+% channels{1}.init([14319, -200], 0); %---
+% channels{2}.init([19294,-2450], 0);
+% channels{3}.init([29616, 2300], 0);
+% channels{4}.init([13406, 3300], 0);
+% channels{5}.init([15648,-2100], 0);
+% channels{6}.init([27633,-1900], 0);
+
+channels{1}.init([33752,-1100], 0);
+channels{2}.init([10955, 3000], 0);
+channels{3}.init([25754, 1800], 0);
+channels{4}.init([10908, -450], 0);
+channels{5}.init([15321, 2550], 0);
+channels{6}.init([39262,-2050], 0);
 
 %% ´´½¨¸ú×Ù½á¹û´æ´¢¿Õ¼ä
 trackResults = repmat(trackResult_struct(msToProcess), svN,1);
@@ -123,7 +132,7 @@ for t=1:msToProcess
                 trackResults(k).remCarrPhase(n,:) = channels{k}.remCarrPhase;
                 trackResults(k).carrFreq(n,:)     = channels{k}.carrFreq;
                 % »ù´ø´¦Àí
-                channels{k}.set_sampleFreq(sampleFreq0); %¸üĞÂÍ¨µÀ²ÉÑùÆµÂÊ
+                channels{k}.set_deltaFreq(deltaFreq); %¸üĞÂÍ¨µÀÆµÂÊÎó²î£¬±£Ö¤²ÉÑùÆµÂÊÊÇ×¼µÄ
                 trackDataHead = channels{k}.trackDataHead;
                 trackDataTail = channels{k}.trackDataTail;
                 if trackDataHead>trackDataTail
@@ -131,7 +140,7 @@ for t=1:msToProcess
                 else
                     [I_Q, disc] = channels{k}.track([buff(:,trackDataTail:end),buff(:,1:trackDataHead)]);
                 end
-                channels{k}.parse(ta); %¿ÉÒÔ×¢ÊÍµô£¬Ö»¸ú×Ù²»½âÎö
+                channels{k}.parse; %¿ÉÒÔ×¢ÊÍµô£¬Ö»¸ú×Ù²»½âÎö
                 % ´æ¸ú×Ù½á¹û£¨¸ú×Ù½á¹û£©
                 trackResults(k).I_Q(n,:)          = I_Q;
                 trackResults(k).disc(n,:)         = disc;
@@ -169,10 +178,9 @@ for t=1:msToProcess
         % 3.Ê±ÖÓ·´À¡ĞŞÕı
         if receiverState==1 && ~isnan(pos(7))
             deltaFreq = deltaFreq + 10*pos(8)*dtpos/1000; %ÖÓÆµ²îÀÛ¼Ó
-            ta = ta - sec2smu(10*pos(7)*dtpos/1000); %Ê±ÖÓĞŞÕı£¨¿ÉÒÔ²»ÓÃ½øÎ»£¬ÔÚÏÂ´Î¸üĞÂÊ±½øÎ»£©
+%             ta = ta - sec2smu(10*pos(7)*dtpos/1000); %Ê±ÖÓĞŞÕı£¨¿ÉÒÔ²»ÓÃ½øÎ»£¬ÔÚÏÂ´Î¸üĞÂÊ±½øÎ»£©
         end
         % 4.´æ´¢Êä³ö
-%         output_ta(no,1)   = ta(1) + ta(2)/1e3 + ta(3)/1e6; %Ê±¼ä´Á£¬s
         output_ta(no,1)   = tp(1) + tp(2)/1e3 + tp(3)/1e6; %Ê±¼ä´Á£¬s
         output_ta(no,2)   = receiverState; %½ÓÊÕ»ú×´Ì¬
         output_pos(no,:)  = pos;
@@ -264,6 +272,8 @@ for k=1:svN
     plot(ax2, trackResults(k).dataIndex/sampleFreq, trackResults(k).I_Q(:,8)) %Q
     plot(ax2, trackResults(k).dataIndex/sampleFreq, trackResults(k).I_Q(:,7)) %I
     plot(ax4, trackResults(k).dataIndex/sampleFreq, trackResults(k).carrFreq, 'LineWidth',1.5) %ÔØ²¨ÆµÂÊ
+    plot(ax5, trackResults(k).dataIndex/sampleFreq, trackResults(k).disc(:,1))
+    plot(ax5, trackResults(k).dataIndex/sampleFreq, trackResults(k).std(:,1))
     
     % µ÷Õû×ø±êÖá
     set(ax2, 'XLim',[0,msToProcess/1000])
