@@ -86,7 +86,7 @@ classdef GPS_L1CA_track < handle
         
         %% 跟踪
         function [I_Q, disc] = track(obj, rawSignal)
-            %----修正采样频率
+            %----真实采样频率
             sampleFreq0 = obj.sampleFreq * (1+obj.deltaFreq);
             %----更新跟踪开始点在文件中的位置（下次跟踪）
             obj.dataIndex = obj.dataIndex + obj.blkSize;
@@ -101,9 +101,9 @@ classdef GPS_L1CA_track < handle
             obj.remCarrPhase = mod(theta_next, 1); %剩余载波相位，周
             %----生成本地码
             tcode = obj.remCodePhase + obj.codeNco*t + 2; %加2保证求滞后码时大于1
-            earlyCode  = obj.code(floor(tcode+0.5)); %超前码
+            earlyCode  = obj.code(floor(tcode+0.3)); %超前码
             promptCode = obj.code(floor(tcode));     %即时码
-            lateCode   = obj.code(floor(tcode-0.5)); %滞后码
+            lateCode   = obj.code(floor(tcode-0.3)); %滞后码
             obj.remCodePhase = obj.remCodePhase + obj.codeNco*te - obj.codeInt; %剩余载波相位，周
             %----原始数据乘载波
             iBasebandSignal = rawSignal(1,:).*carr_cos + rawSignal(2,:).*carr_sin; %乘负载波
@@ -118,7 +118,7 @@ classdef GPS_L1CA_track < handle
             %----码鉴相器
             S_E = sqrt(I_E^2+Q_E^2);
             S_L = sqrt(I_L^2+Q_L^2);
-            codeError = 0.5 * (S_E-S_L)/(S_E+S_L); %单位：码片，0.5--0.5，0.4--0.6，0.3--0.7，0.25--0.75
+            codeError = 0.7 * (S_E-S_L)/(S_E+S_L); %单位：码片，0.5--0.5，0.4--0.6，0.3--0.7，0.25--0.75
             %----载波鉴相器
             carrError = atan(Q_P/I_P) / (2*pi); %单位：周
             %----鉴频器
@@ -146,9 +146,15 @@ classdef GPS_L1CA_track < handle
                 obj.carrFreq = obj.PLL.Int;
             end
             %----DLL
-            obj.DLL.Int = obj.DLL.Int + obj.DLL.K2*codeError; %延迟锁定环积分器
-            obj.codeNco = obj.DLL.Int + obj.DLL.K1*codeError;
-            obj.codeFreq = obj.DLL.Int;
+            if obj.DLLFlag==0
+                obj.DLL.Int = obj.DLL.Int + obj.DLL.K2*codeError; %延迟锁定环积分器
+                obj.codeNco = obj.DLL.Int + obj.DLL.K1*codeError;
+                obj.codeFreq = obj.DLL.Int;
+            else
+                obj.codeNco = 1.023e6 + (obj.carrFreq+obj.deltaFreq*1575.42e6)/1540;
+                obj.codeFreq = obj.codeNco;
+                obj.remCodePhase = obj.remCodePhase + codeError*0.045;
+            end
             %----更新伪码周期时间
             obj.ts0 = obj.ts0 + obj.timeIntMs;
             %----更新下一数据块位置
@@ -194,12 +200,13 @@ classdef GPS_L1CA_track < handle
                 obj.trackDataHead = obj.trackDataHead - obj.buffSize;
             end
             if ti==10
-                [K1, K2] = orderTwoLoopCoefDisc(20, 0.707, obj.timeIntS);
+                [K1, K2] = orderTwoLoopCoefDisc(25, 0.707, obj.timeIntS);
                 obj.PLL.K1 = K1;
                 obj.PLL.K2 = K2;
-                [K1, K2] = orderTwoLoopCoefDisc(1.8, 0.707, obj.timeIntS);
+                [K1, K2] = orderTwoLoopCoefDisc(2, 0.707, obj.timeIntS);
                 obj.DLL.K1 = K1;
                 obj.DLL.K2 = K2;
+%                 obj.DLLFlag = 1;
             elseif ti==1
                 [K1, K2] = orderTwoLoopCoefDisc(25, 0.707, obj.timeIntS);
                 obj.PLL.K1 = K1;

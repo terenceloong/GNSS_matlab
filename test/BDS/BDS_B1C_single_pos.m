@@ -161,12 +161,10 @@ for t=1:msToProcess
                 dn = mod(buffHead-channels{k}.trackDataTail+1, buffSize) - 1; %trackDataTail恰好超前buffHead一个时，dn=-1
                 dtc = dn / sampleFreq0; %当前采样时间与跟踪点的时间差
                 dt = dtc - dtp; %定位点到跟踪点的时间差
-                carrFreq = channels{k}.carrFreq + 1575.42e6*deltaFreq; %修正后的载波频率
-                codeFreq = (carrFreq/1575.42e6+1)*2.046e6; %通过载波频率计算的码频率
-                codePhase = channels{k}.remCodePhase + dt*codeFreq; %定位点码相位
+                codePhase = channels{k}.remCodePhase + dt*channels{k}.codeNco; %定位点码相位
                 ts0 = [floor(channels{k}.ts0/1e3), mod(channels{k}.ts0,1e3), 0] + [0, floor(codePhase/2046), mod(codePhase/2046,1)*1e3]; %定位点的码发射时间
                 [sv(k,:),~] = BDS_CNAV1_ephemeris_rho(channels{k}.ephemeris, tp, ts0); %根据星历计算卫星[位置、伪距、速度]
-                sv(k,8) = -carrFreq/1575.42e6*299792458; %载波频率转化为速度
+                sv(k,8) = -(channels{k}.carrFreq/1575.42e6 + deltaFreq) * 299792458; %载波频率转化为速度
                 sv(k,8) = sv(k,8) + channels{k}.ephemeris(26)*299792458; %修卫星钟频差，卫星钟快测的伪距率偏小
                 R(k) = channels{k}.varCode.D;
             end

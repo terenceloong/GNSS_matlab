@@ -195,6 +195,8 @@ for k=1:svN
     plot(ax2, trackResults(k).dataIndex/sampleFreq, trackResults(k).I_Q(:,8)) %Q
     plot(ax2, trackResults(k).dataIndex/sampleFreq, trackResults(k).I_Q(:,7)) %I
     plot(ax4, trackResults(k).dataIndex/sampleFreq, trackResults(k).carrFreq, 'LineWidth',1.5) %载波频率
+    plot(ax5, trackResults(k).dataIndex/sampleFreq, trackResults(k).disc(:,1))
+    plot(ax5, trackResults(k).dataIndex/sampleFreq, trackResults(k).std(:,1))
     
     % 调整坐标轴
     set(ax2, 'XLim',[0,msToProcess/1000])

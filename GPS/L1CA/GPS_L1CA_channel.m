@@ -46,7 +46,7 @@ classdef GPS_L1CA_channel < GPS_L1CA_track
         % 比特同步后开始寻找帧头，接收一个完整子帧才能校验帧头，从寻找帧头到解析星历至少6s，最多12s
         % 验证帧头后就可以确定码发射时间
         % 星历解析30s一次
-        % 比特同步后增加积分时间
+        % 比特同步后可以增加积分时间
         function parse(obj)
             obj.msgCnt = obj.msgCnt + 1; %计数加1
             switch obj.msgStage %I,B,W,H,C,E
@@ -64,13 +64,14 @@ classdef GPS_L1CA_channel < GPS_L1CA_track
                     end
                     obj.I0 = obj.I;
                     if obj.msgCnt==2000 %2s后检验统计表，此时有100个比特
+                        obj.I0 = 0;
                         if max(obj.bitSyncTable)>10 && (sum(obj.bitSyncTable)-max(obj.bitSyncTable))<=2
                         % 比特同步成功，确定电平翻转位置（电平翻转大都发生在一个点上）
                             [~,obj.msgCnt] = max(obj.bitSyncTable); %将计数值设为同步表最大值的索引
                             obj.bitSyncTable = zeros(1,20); %比特同步统计表清零
                             obj.msgCnt = -obj.msgCnt + 1; %如果索引为1，下个I路积分值就为比特开始处
                             if obj.msgCnt==0
-                                obj.set_timeInt(10); %增加积分时间
+%                                 obj.set_timeInt(10); %增加积分时间
                                 obj.msgStage = 'H'; %进入寻找帧头阶段
                                 fprintf(obj.logID, '%2d: Start find head at %.8fs\r\n', ...
                                 obj.PRN, obj.dataIndex/obj.sampleFreq);
@@ -86,7 +87,7 @@ classdef GPS_L1CA_channel < GPS_L1CA_track
                     end
                 case 'W' %<<====等待比特头
                     if obj.msgCnt==0
-                        obj.set_timeInt(10); %增加积分时间
+%                         obj.set_timeInt(10); %增加积分时间
                         obj.msgStage = 'H'; %进入寻找帧头阶段
                         fprintf(obj.logID, '%2d: Start find head at %.8fs\r\n', ...
                         obj.PRN, obj.dataIndex/obj.sampleFreq);

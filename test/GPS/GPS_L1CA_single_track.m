@@ -5,7 +5,8 @@ clear
 clc
 
 %% 数据文件
-data_file = 'E:\GNSS data\B210_20190726_205109_ch1.dat';
+% data_file = 'E:\GNSS data\B210_20190726_205109_ch1.dat'; %---
+data_file = 'E:\GNSS data\0823\B210_20190823_194010_ch1.dat';
 
 %% 计时开始
 tic
@@ -18,7 +19,7 @@ log_file = [curr_path,'\log.txt']; %日志文件
 logID = fopen(log_file, 'w'); %在当前代码路径下创建日志文件（时间顺序的日志）
 
 %% 运行时间
-msToProcess = 40*1*1000; %处理总时间
+msToProcess = 20*1*1000; %处理总时间
 sample_offset = 0*4e6; %抛弃前多少个采样点
 sampleFreq = 4e6; %接收机采样频率
 
@@ -38,7 +39,8 @@ ta = time_carry(round(ta,2)); %取整
 
 %% 卫星列表
 svList = 15;
-% svList = [10;13;15;20;21;24];
+% svList = [10;13;15;20;21;24]; %---
+% svList = [10;15;20;21;24];
 svN = length(svList);
 
 %% 为每颗可能见到的卫星分配跟踪通道
@@ -47,19 +49,25 @@ for k=1:svN %创建跟踪通道对象
     channels{k} = GPS_L1CA_channel(sampleFreq, buffSize, svList(k), logID);
 end
 % 根据捕获结果初始化通道
-% channels{1}.init([2947, 3250], 0);
+% channels{1}.init([2947, 3250], 0); %---
 % channels{2}.init([2704,-2750], 0);
 % channels{3}.init([2341,-1250], 0);
 % channels{4}.init([2772, 2250], 0);
 % channels{5}.init([2621, -750], 0);
 % channels{6}.init([1384, 2000], 0);
 
-% channels{1}.init([2947, 3250], 0);
+% channels{1}.init([2947, 3250], 0); %---
 % channels{1}.init([2704,-2750], 0);
-channels{1}.init([2341,-1250], 0);
+% channels{1}.init([2341,-1250], 0);
 % channels{1}.init([2772, 2250], 0);
 % channels{1}.init([2621, -750], 0);
 % channels{1}.init([1384, 2000], 0);
+
+% channels{1}.init([2565, 2750], 0);
+channels{1}.init([3280,-2000], 0);
+% channels{1}.init([2408, 1000], 0);
+% channels{1}.init([ 336,-2000], 0);
+% channels{1}.init([1609,  500], 0);
 
 %% 创建跟踪结果存储空间
 trackResults = repmat(trackResult_struct(msToProcess), svN,1);
@@ -184,6 +192,8 @@ for k=1:svN
     plot(ax1, trackResults(k).I_Q(1001:end,1),trackResults(k).I_Q(1001:end,4), 'LineStyle','none', 'Marker','.') %I/Q图
     plot(ax2, trackResults(k).dataIndex/sampleFreq, trackResults(k).I_Q(:,1))
     plot(ax4, trackResults(k).dataIndex/sampleFreq, trackResults(k).carrFreq, 'LineWidth',1.5) %载波频率
+    plot(ax5, trackResults(k).dataIndex/sampleFreq, trackResults(k).disc(:,1))
+    plot(ax5, trackResults(k).dataIndex/sampleFreq, trackResults(k).std(:,1))
     
     % 调整坐标轴
     set(ax2, 'XLim',[0,msToProcess/1000])

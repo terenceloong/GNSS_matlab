@@ -5,7 +5,8 @@ clear
 clc
 
 %% Êı¾İÎÄ¼ş
-data_file = 'E:\GNSS data\B210_20190726_205109_ch2.dat';
+% data_file = 'E:\GNSS data\B210_20190726_205109_ch2.dat'; %---
+data_file = 'E:\GNSS data\0823\B210_20190823_194010_ch1.dat';
 
 %% ¼ÆÊ±¿ªÊ¼
 tic
@@ -18,7 +19,7 @@ log_file = [curr_path,'\log.txt']; %ÈÕÖ¾ÎÄ¼ş
 logID = fopen(log_file, 'w'); %ÔÚµ±Ç°´úÂëÂ·¾¶ÏÂ´´½¨ÈÕÖ¾ÎÄ¼ş£¨Ê±¼äË³ĞòµÄÈÕÖ¾£©
 
 %% ÔËĞĞÊ±¼ä
-msToProcess = 200*1*1000; %´¦Àí×ÜÊ±¼ä
+msToProcess = 60*1*1000; %´¦Àí×ÜÊ±¼ä
 sample_offset = 0*4e6; %Å×ÆúÇ°¶àÉÙ¸ö²ÉÑùµã
 sampleFreq = 4e6; %½ÓÊÕ»ú²ÉÑùÆµÂÊ
 
@@ -37,8 +38,8 @@ ta = [ts,0,0] + sample2dt(sample_offset, sampleFreq); %³õÊ¼»¯½ÓÊÕ»úÊ±¼ä£¨ÖÜÄÚÃëÊ
 ta = time_carry(round(ta,2)); %È¡Õû
 
 %% ÎÀĞÇÁĞ±í
-svList = [10;13;15;20;21;24];
-% svList = [13;15;20;21;24];
+% svList = [10;13;15;20;21;24]; %---
+svList = [10;15;20;21;24];
 svN = length(svList);
 
 %% ÎªÃ¿¿Å¿ÉÄÜ¼ûµ½µÄÎÀĞÇ·ÖÅä¸ú×ÙÍ¨µÀ
@@ -47,18 +48,18 @@ for k=1:svN %´´½¨¸ú×ÙÍ¨µÀ¶ÔÏó
     channels{k} = GPS_L1CA_channel(sampleFreq, buffSize, svList(k), logID);
 end
 % ¸ù¾İ²¶»ñ½á¹û³õÊ¼»¯Í¨µÀ
-channels{1}.init([2947, 3250], 0);
-channels{2}.init([2704,-2750], 0);
-channels{3}.init([2341,-1250], 0);
-channels{4}.init([2772, 2250], 0);
-channels{5}.init([2621, -750], 0);
-channels{6}.init([1384, 2000], 0);
+% channels{1}.init([2947, 3250], 0); %---
+% channels{2}.init([2704,-2750], 0);
+% channels{3}.init([2341,-1250], 0);
+% channels{4}.init([2772, 2250], 0);
+% channels{5}.init([2621, -750], 0);
+% channels{6}.init([1384, 2000], 0);
 
-% channels{1}.init([2704,-2750], 0);
-% channels{2}.init([2341,-1250], 0);
-% channels{3}.init([2772, 2250], 0);
-% channels{4}.init([2621, -750], 0);
-% channels{5}.init([1384, 2000], 0);
+channels{1}.init([2565, 2750], 0);
+channels{2}.init([3280,-2000], 0);
+channels{3}.init([2408, 1000], 0);
+channels{4}.init([ 336,-2000], 0);
+channels{5}.init([1609,  500], 0);
 
 %% ´´½¨¸ú×Ù½á¹û´æ´¢¿Õ¼ä
 trackResults = repmat(trackResult_struct(msToProcess), svN,1);
@@ -154,7 +155,7 @@ for t=1:msToProcess
                 dn = mod(buffHead-channels{k}.trackDataTail+1, buffSize) - 1; %trackDataTailÇ¡ºÃ³¬Ç°buffHeadÒ»¸öÊ±£¬dn=-1
                 dtc = dn / sampleFreq0; %µ±Ç°²ÉÑùÊ±¼äÓë¸ú×ÙµãµÄÊ±¼ä²î
                 dt = dtc - dtp; %¶¨Î»µãµ½¸ú×ÙµãµÄÊ±¼ä²î
-                codePhase = channels{k}.remCodePhase + dt*channels{k}.codeFreq; %¶¨Î»µãÂëÏàÎ»
+                codePhase = channels{k}.remCodePhase + dt*channels{k}.codeNco; %¶¨Î»µãÂëÏàÎ»
                 ts0 = [floor(channels{k}.ts0/1e3), mod(channels{k}.ts0,1e3), 0] + [0, floor(codePhase/1023), mod(codePhase/1023,1)*1e3]; %¶¨Î»µãµÄÂë·¢ÉäÊ±¼ä
                 [sv(k,:),~] = GPS_L1CA_ephemeris_rho(channels{k}.ephemeris, tp, ts0); %¸ù¾İĞÇÀú¼ÆËãÎÀĞÇ[Î»ÖÃ¡¢Î±¾à¡¢ËÙ¶È]
                 sv(k,8) = -(channels{k}.carrFreq/1575.42e6 + deltaFreq) * 299792458; %ÔØ²¨ÆµÂÊ×ª»¯ÎªËÙ¶È
@@ -169,7 +170,7 @@ for t=1:msToProcess
         % 3.Ê±ÖÓ·´À¡ĞŞÕı
         if receiverState==1 && ~isnan(pos(7))
             deltaFreq = deltaFreq + 10*pos(8)*dtpos/1000; %ÖÓÆµ²îÀÛ¼Ó
-            ta = ta - sec2smu(10*pos(7)*dtpos/1000); %Ê±ÖÓĞŞÕı£¨¿ÉÒÔ²»ÓÃ½øÎ»£¬ÔÚÏÂ´Î¸üĞÂÊ±½øÎ»£©
+%             ta = ta - sec2smu(10*pos(7)*dtpos/1000); %Ê±ÖÓĞŞÕı£¨¿ÉÒÔ²»ÓÃ½øÎ»£¬ÔÚÏÂ´Î¸üĞÂÊ±½øÎ»£©
         end
         % 4.´æ´¢Êä³ö
         output_ta(no,1)   = tp(1) + tp(2)/1e3 + tp(3)/1e6; %Ê±¼ä´Á£¬s
@@ -262,6 +263,8 @@ for k=1:svN
     plot(ax1, trackResults(k).I_Q(1001:end,1),trackResults(k).I_Q(1001:end,4), 'LineStyle','none', 'Marker','.') %I/QÍ¼
     plot(ax2, trackResults(k).dataIndex/sampleFreq, trackResults(k).I_Q(:,1))
     plot(ax4, trackResults(k).dataIndex/sampleFreq, trackResults(k).carrFreq, 'LineWidth',1.5) %ÔØ²¨ÆµÂÊ
+    plot(ax5, trackResults(k).dataIndex/sampleFreq, trackResults(k).disc(:,1))
+    plot(ax5, trackResults(k).dataIndex/sampleFreq, trackResults(k).std(:,1))
     
     % µ÷Õû×ø±êÖá
     set(ax2, 'XLim',[0,msToProcess/1000])
