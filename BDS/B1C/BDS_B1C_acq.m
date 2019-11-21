@@ -1,4 +1,4 @@
-function acqResults = BDS_B1C_acq(file_path, sample_offset)
+function acqResults = BDS_B1C_acq(file_path, sample_offset, figure_flag)
 % 北斗B1C信号捕获，只搜索北斗三号卫星，20ms数据长度，结果存在变量acqResults中
 % B1C信号只在北斗三号MEO、IGSO上播发
 % sample_offset：抛弃前多少个采样点处开始处理
@@ -63,15 +63,17 @@ for PRN=svList
     %----捕获到信号
     if (peakSize/secondPeakSize)>acqThreshold
         % 画图
-        figure
-        subplot(2,1,1) %码相位方向
-        plot(result(index,:)) %result的行
-        grid on
-        title(['PRN = ',num2str(PRN)])
-        subplot(2,1,2) %频率方向
-        plot(carrFreq, result(:,corrIndex(index))') %result的列
-        grid on
-        drawnow
+        if figure_flag
+            figure
+            subplot(2,1,1) %码相位方向
+            plot(result(index,:)) %result的行
+            grid on
+            title(['PRN = ',num2str(PRN)])
+            subplot(2,1,2) %频率方向
+            plot(carrFreq, result(:,corrIndex(index))') %result的列
+            grid on
+            drawnow
+        end
         %存储捕获结果
         ki = find(svList==PRN,1);
         acqResults(ki,1) = corrIndex(index); %码相位

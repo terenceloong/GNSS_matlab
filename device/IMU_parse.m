@@ -5,7 +5,7 @@ function varargout = IMU_parse()
 % 使用可变参数输出，使该程序可以直接运行，无输出
 
 %% 1.读文件
-default_path = fileread('.\temp\dataPath.txt'); %数据文件所在默认路径
+default_path = fileread('.\temp\path_data.txt'); %数据文件所在默认路径
 [file, path] = uigetfile([default_path,'\*.dat'], '选择IMU数据文件'); %文件选择对话框，限制为.dat文件
 if file==0
     disp('Invalid file!');

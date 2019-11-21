@@ -1,4 +1,4 @@
-function acqResults = GPS_L1CA_acq(file_path, sample_offset, N)
+function acqResults = GPS_L1CA_acq(file_path, sample_offset, N, figure_flag)
 % GPS信号捕获。32颗卫星全搜索，连续搜索2段数据，使用最大值。结果存在变量acqResults中
 % sample_offset：抛弃前多少个采样点处开始处理
 % N：FFT点数
@@ -80,10 +80,12 @@ for PRN=1:32
     %----捕获到信号
     if (peakSize/secondPeakSize)>acqThreshold
         % 画图
-        figure
-        surf(Xg,Yg,result)
-        title(['PRN = ',num2str(PRN)])
-        drawnow
+        if figure_flag
+            figure
+            surf(Xg,Yg,result)
+            title(['PRN = ',num2str(PRN)])
+            drawnow
+        end
         
         %存储捕获结果
         acqResults(PRN,1) = corrIndex(index); %码相位

@@ -1,4 +1,5 @@
-function trackResults = trackResults_clean(trackResults)
+function trackResults = clean_trackResults(trackResults)
+% 自动识别结构体中的场名并清除多余变量
 
 fields = fieldnames(trackResults); %场名
 

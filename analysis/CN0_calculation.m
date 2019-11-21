@@ -5,12 +5,12 @@
 A = 10;
 sigma = 0.2;
 
-n = 200*1000;
+n = 200*1000; %数据点数
 
 I = randn(n,1)*sigma + A;
 Q = randn(n,1)*sigma;
 
-% figure
+% figure %画散点分布
 % plot(I,Q, 'LineStyle','none', 'Marker','.')
 % grid on
 % axis equal
@@ -18,7 +18,7 @@ Q = randn(n,1)*sigma;
 % set(gca, 'Ylim', [-5*sigma-A, 5*sigma+A])
 
 M = 20; %宽带窄带计算数据段点数
-N = n/M;
+N = n/M; %数据段个数
 
 NBP_WBP = zeros(N,1);
 
@@ -35,6 +35,6 @@ CN0i = sqrt(2*(NBP_WBP-1)./(M-NBP_WBP)); %用一次NBP/WBP计算载噪比
 plot(CN0i)
 hold on
 
-Z = movmean(NBP_WBP,25); %使用NBP/WBP的均值计算载噪比，这个是公式所表达的
+Z = movmean(NBP_WBP,25); %使用NBP/WBP的均值计算载噪比，这个是载噪比计算公式所表达的
 CN0m = sqrt(2*(Z-1)./(M-Z)); %算出来的值应该等于A/sigma
 plot(CN0m)

@@ -1,5 +1,5 @@
 % 打开文件夹选择对话框，选择数据所在的文件夹
-% 每次打开工程时运行，将路径写入.\temp\dataPath.txt
+% 每次打开工程时运行，将路径写入.\temp\path_data.txt
 % 如需修改，再次运行此脚本
 % 将此脚本设置快捷键
 
@@ -10,7 +10,7 @@ while 1
     end
 end
 
-fileID = fopen('.\temp\dataPath.txt', 'w');
+fileID = fopen('.\temp\path_data.txt', 'w');
 fprintf(fileID, '%s', selpath);
 fclose(fileID);
 
