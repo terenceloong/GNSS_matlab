@@ -1,4 +1,4 @@
-function analysis_GPS_BDS_pos
+function analysis_measure_GPS_BDS
 % 分析单天线GPS+北斗伪距、伪距率测量精度，几何精度因子
 % 给定固定的参考坐标，静止时，伪距伪距率误差为常值，运动时，伪距伪距率误差是载体运动造成的
 % 运行结束后查看analysis变量
@@ -8,7 +8,7 @@ function analysis_GPS_BDS_pos
 output = evalin('base', 'output');
 
 %% 参考坐标
-p0 = [45.73580, 126.62881, 159];
+p0 = [45.73106, 126.62483, 207];
 rp = lla2ecef(p0); %ecef
 Cen = dcmecef2ned(p0(1), p0(2));
 

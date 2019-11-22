@@ -4,12 +4,16 @@ function sv_3Dview_DOP
 % 直接打开3D视图旋转，右键选择视角，双击恢复
 % 四星方位均匀分布同高度角无法定位，GDOP无穷大，因为沿对称轴每个点都可能是定位点
 
+n = 2000;
+
 %----GPS
 % GPS_azi = [-20,40,120,240]; %方位角，deg
 % GPS_ele = [45,19,69,39]; %高度角，deg
-GPS_azi = [-67.1842712463604,-46.5254261898561,135.997867462437,-63.3841934748329];
-GPS_ele = [63.4628930933702,23.8937333846155,74.1078453505734,88.0626420069254];
-svList_GPS = [6;12;17;19];
+% svList_GPS = [6;12;17;19];
+
+GPS_azi = evalin('base', ['analysis.GPS_azi(',num2str(n),',:)']);
+GPS_ele = evalin('base', ['analysis.GPS_ele(',num2str(n),',:)']);
+svList_GPS = evalin('base', 'svList_GPS');
 
 svN_GPS = length(svList_GPS);
 sv_GPS = [GPS_azi',GPS_ele'];
@@ -17,9 +21,11 @@ sv_GPS = [GPS_azi',GPS_ele'];
 %---BDS
 % BDS_azi = [10,80,170,280];
 % BDS_ele = [85,20,47,20];
-BDS_azi = [163.441894514421,65.4201132522711,-50.7605021211786,-57.6087963849033];
-BDS_ele = [54.5333009779103,48.7153102787986,68.3849072742272,70.9844546925158];
-svList_BDS = [21;22;34;38];
+% svList_BDS = [21;22;34;38];
+
+BDS_azi = evalin('base', ['analysis.BDS_azi(',num2str(n),',:)']);
+BDS_ele = evalin('base', ['analysis.BDS_ele(',num2str(n),',:)']);
+svList_BDS = evalin('base', 'svList_BDS');
 
 svN_BDS = length(svList_BDS);
 sv_BDS = [BDS_azi',BDS_ele'];
@@ -35,12 +41,15 @@ for k=1:svN_GPS
     G(k,2) = -cosd(sv_GPS(k,2))*sind(sv_GPS(k,1));
     G(k,3) =  sind(sv_GPS(k,2));
 end
-D = inv(G'*G);
-sigma_GPS = sqrt(diag(D))
-HDOP_GPS = norm(sigma_GPS(1:2))
-PDOP_GPS = norm(sigma_GPS(1:3))
-GDOP_GPS = norm(sigma_GPS)
-disp('-------------------------------')
+G(isnan(G(:,1)),:) = []; %删除空行
+if size(G,1)>=4
+    D = inv(G'*G);
+    sigma_GPS = sqrt(diag(D))
+%     HDOP_GPS = norm(sigma_GPS(1:2))
+%     PDOP_GPS = norm(sigma_GPS(1:3))
+%     GDOP_GPS = norm(sigma_GPS)
+    disp('-------------------------------')
+end
 
 % 北斗几何精度因子
 G = zeros(svN_BDS,4);
@@ -50,12 +59,15 @@ for k=1:svN_BDS
     G(k,2) = -cosd(sv_BDS(k,2))*sind(sv_BDS(k,1));
     G(k,3) =  sind(sv_BDS(k,2));
 end
-D = inv(G'*G);
-sigma_BDS = sqrt(diag(D))
-HDOP_BDS = norm(sigma_BDS(1:2))
-PDOP_BDS = norm(sigma_BDS(1:3))
-GDOP_BDS = norm(sigma_BDS)
-disp('-------------------------------')
+G(isnan(G(:,1)),:) = []; %删除空行
+if size(G,1)>=4
+    D = inv(G'*G);
+    sigma_BDS = sqrt(diag(D))
+%     HDOP_BDS = norm(sigma_BDS(1:2))
+%     PDOP_BDS = norm(sigma_BDS(1:3))
+%     GDOP_BDS = norm(sigma_BDS)
+    disp('-------------------------------')
+end
 
 % GPS+北斗几何精度因子
 sv_GPS_BDS = [sv_GPS; sv_BDS];
@@ -67,11 +79,14 @@ for k=1:svN_GPS_BDS
     G(k,2) = -cosd(sv_GPS_BDS(k,2))*sind(sv_GPS_BDS(k,1));
     G(k,3) =  sind(sv_GPS_BDS(k,2));
 end
-D = inv(G'*G);
-sigma_GPS_BDS = sqrt(diag(D))
-HDOP_GPS_BDS = norm(sigma_GPS_BDS(1:2))
-PDOP_GPS_BDS = norm(sigma_GPS_BDS(1:3))
-GDOP_GPS_BDS = norm(sigma_GPS_BDS)
+G(isnan(G(:,1)),:) = []; %删除空行
+if size(G,1)>=4
+    D = inv(G'*G);
+    sigma_GPS_BDS = sqrt(diag(D))
+%     HDOP_GPS_BDS = norm(sigma_GPS_BDS(1:2))
+%     PDOP_GPS_BDS = norm(sigma_GPS_BDS(1:3))
+%     GDOP_GPS_BDS = norm(sigma_GPS_BDS)
+end
 
 end
 
@@ -95,6 +110,9 @@ function plot_sv_3d(sv_GPS, svList_GPS, sv_BDS, svList_BDS)
     plot3(0,0,0, 'Color',[0.9290 0.6940 0.1250], 'LineStyle','none', 'Marker','.', 'MarkerSize',25) %画原点
 
     for k=1:svN_GPS
+        if isnan(sv_GPS(k,1))
+            continue
+        end
         p = [cosd(sv_GPS(k,2))*cosd(90-sv_GPS(k,1)), ...
              cosd(sv_GPS(k,2))*sind(90-sv_GPS(k,1)), ...
              sind(sv_GPS(k,2))];
@@ -104,6 +122,9 @@ function plot_sv_3d(sv_GPS, svList_GPS, sv_BDS, svList_BDS)
     end
 
     for k=1:svN_BDS
+        if isnan(sv_BDS(k,1))
+            continue
+        end
         p = [cosd(sv_BDS(k,2))*cosd(90-sv_BDS(k,1)), ...
              cosd(sv_BDS(k,2))*sind(90-sv_BDS(k,1)), ...
              sind(sv_BDS(k,2))];

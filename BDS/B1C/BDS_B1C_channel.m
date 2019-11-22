@@ -105,7 +105,7 @@ classdef BDS_B1C_channel < BDS_B1C_track
                             end
                             [Rmax, index] = max(abs(R)); %寻找相关结果的最大值
                             if Rmax==50 %最大相关值正确
-                                obj.start_pure_PLL(index+50, R(index)<0); %启动纯锁相环
+                                obj.start_pure_PLL(mod(index+49,1800)+1, R(index)<0); %启动纯锁相环
                                 obj.frameBuffPoint = mod(index+49,1800); %帧缓存指针移动
                                 if obj.frameBuffPoint==0
                                     obj.msgStage = 'E'; %进入解析星历阶段
