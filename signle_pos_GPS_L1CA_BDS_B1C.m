@@ -24,7 +24,7 @@ data_file_A = data_file;
 % data_file_A = 'F:\GNSS data\20190826\B210_20190826_112408_ch1.dat';
 
 %% 运行时间
-msToProcess = 60*1*1000; %处理总时间
+msToProcess = 100*1*1000; %处理总时间
 sample_offset = 0*4e6; %抛弃前多少个采样点
 sampleFreq = 4e6; %接收机采样频率
 
@@ -86,7 +86,7 @@ end
 
 %--通道输出存储空间
 m = msToProcess + 10;
-trackResults_GPS_A = struct('PRN',0, 'n',1, ...
+trackResults_GPS = struct('PRN',0, 'n',1, ...
 'dataIndex',    zeros(m,1), ...
 ...'remCodePhase', zeros(m,1), ... %可以不存，注释掉在前面加...
 'codeFreq',     zeros(m,1), ...
@@ -95,7 +95,8 @@ trackResults_GPS_A = struct('PRN',0, 'n',1, ...
 'I_Q',          zeros(m,6), ...
 'disc',         zeros(m,3), ...
 'std',          zeros(m,2));
-trackResults_GPS_A = repmat(trackResults_GPS_A, svN_GPS,1);
+trackResults_GPS_A = repmat(trackResults_GPS, svN_GPS,1);
+clearvars trackResults_GPS
 for k=1:svN_GPS
     trackResults_GPS_A(k).PRN = svList_GPS(k);
 end
@@ -133,7 +134,7 @@ end
 
 %--通道输出存储空间
 m = msToProcess + 10;
-trackResults_BDS_A = struct('PRN',0, 'n',1, ...
+trackResults_BDS = struct('PRN',0, 'n',1, ...
 'dataIndex',    zeros(m,1), ...
 ...'remCodePhase', zeros(m,1), ... %可以不存，注释掉在前面加...
 'codeFreq',     zeros(m,1), ...
@@ -142,7 +143,8 @@ trackResults_BDS_A = struct('PRN',0, 'n',1, ...
 'I_Q',          zeros(m,8), ...
 'disc',         zeros(m,2), ...
 'std',          zeros(m,2));
-trackResults_BDS_A = repmat(trackResults_BDS_A, svN_BDS,1);
+trackResults_BDS_A = repmat(trackResults_BDS, svN_BDS,1);
+clearvars trackResults_BDS
 for k=1:svN_BDS
     trackResults_BDS_A(k).PRN = svList_BDS(k);
 end
@@ -262,7 +264,7 @@ for t=1:msToProcess
                 dn = mod(buffHead-channels_GPS_A{k}.trackDataTail+1, buffSize) - 1; %trackDataTail恰好超前buffHead一个时，dn=-1
                 dtc = dn / sampleFreq0; %当前采样时间与跟踪点的时间差
                 dt = dtc - dtp; %定位点到跟踪点的时间差
-                codePhase = channels_GPS_A{k}.remCodePhase + dt*channels_GPS_A{k}.codeNco; %定位点码相位
+                codePhase = channels_GPS_A{k}.remCodePhase + channels_GPS_A{k}.codeNco*dt; %定位点码相位
                 ts0 = [floor(channels_GPS_A{k}.ts0/1e3), mod(channels_GPS_A{k}.ts0,1e3), 0] + [0, floor(codePhase/1023), mod(codePhase/1023,1)*1e3]; %定位点的码发射时间
                 [sv_GPS_A(k,1:8),~] = GPS_L1CA_ephemeris_rho(channels_GPS_A{k}.ephemeris, tp, ts0); %根据星历计算卫星位置速度和伪距
                 sv_GPS_A(k,8) = -(channels_GPS_A{k}.carrFreq/1575.42e6 + deltaFreq) * 299792458; %载波频率转化为速度
@@ -278,7 +280,7 @@ for t=1:msToProcess
                 dn = mod(buffHead-channels_BDS_A{k}.trackDataTail+1, buffSize) - 1;
                 dtc = dn / sampleFreq0;
                 dt = dtc - dtp;
-                codePhase = channels_BDS_A{k}.remCodePhase + dt*channels_BDS_A{k}.codeNco;
+                codePhase = channels_BDS_A{k}.remCodePhase + channels_BDS_A{k}.codeNco*dt;
                 ts0 = [floor(channels_BDS_A{k}.ts0/1e3), mod(channels_BDS_A{k}.ts0,1e3), 0] + [0, floor(codePhase/2046), mod(codePhase/2046,1)*1e3]; %北斗考虑子载波时码频率2.046e6Hz
                 [sv_BDS_A(k,1:8),~] = BDS_CNAV1_ephemeris_rho(channels_BDS_A{k}.ephemeris, tp-[14,0,0], ts0); %GPS时减14s为北斗时
                 sv_BDS_A(k,8) = -(channels_BDS_A{k}.carrFreq/1575.42e6 + deltaFreq) * 299792458;

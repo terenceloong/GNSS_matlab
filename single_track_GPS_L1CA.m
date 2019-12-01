@@ -8,10 +8,11 @@ clc %清屏幕
 fclose('all'); %清文件
 
 %% 数据文件
-data_file_A = 'F:\GNSS data\20190726\B210_20190726_205109_ch1.dat';
+% data_file_A = 'F:\GNSS data\20190726\B210_20190726_205109_ch1.dat';
+data_file_A = 'F:\GNSS data\20190826\B210_20190826_104744_ch1.dat';
 
 %% 运行时间
-msToProcess = 20*1*1000; %处理总时间
+msToProcess = 300*1*1000; %处理总时间
 sample_offset = 0*4e6; %抛弃前多少个采样点
 sampleFreq = 4e6; %接收机采样频率
 
@@ -33,7 +34,8 @@ logFile_GPS_A = '.\temp\log_GPS_A.txt'; %日志文件
 logID_GPS_A = fopen(logFile_GPS_A, 'w');
 
 %--卫星列表
-svList_GPS = 15;
+svList_GPS = 6;
+% svList_GPS = 15;
 % svList_GPS = [10;13;15;20;21;24];
 svN_GPS = length(svList_GPS);
 
@@ -53,14 +55,16 @@ end
 
 % channels_GPS_A{1}.init([2947, 3250], 0);
 % channels_GPS_A{1}.init([2704,-2750], 0);
-channels_GPS_A{1}.init([2341,-1250], 0);
+% channels_GPS_A{1}.init([2341,-1250], 0);
 % channels_GPS_A{1}.init([2772, 2250], 0);
 % channels_GPS_A{1}.init([2621, -750], 0);
 % channels_GPS_A{1}.init([1384, 2000], 0);
 
+channels_GPS_A{1}.init([ 301, 1750], 0);
+
 %--通道输出存储空间
 m = msToProcess + 10;
-trackResults_GPS_A = struct('PRN',0, 'n',1, ...
+trackResults_GPS = struct('PRN',0, 'n',1, ...
 'dataIndex',    zeros(m,1), ...
 ...'remCodePhase', zeros(m,1), ... %可以不存，注释掉在前面加...
 'codeFreq',     zeros(m,1), ...
@@ -69,7 +73,8 @@ trackResults_GPS_A = struct('PRN',0, 'n',1, ...
 'I_Q',          zeros(m,6), ...
 'disc',         zeros(m,3), ...
 'std',          zeros(m,2));
-trackResults_GPS_A = repmat(trackResults_GPS_A, svN_GPS,1);
+trackResults_GPS_A = repmat(trackResults_GPS, svN_GPS,1);
+clearvars trackResults_GPS
 for k=1:svN_GPS
     trackResults_GPS_A(k).PRN = svList_GPS(k);
 end

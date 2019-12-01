@@ -59,7 +59,7 @@ logFile_GPS_A = '.\temp\log_GPS_A.txt'; %日志文件
 logID_GPS_A = fopen(logFile_GPS_A, 'w');
 
 %--捕获一次（临时）
-acqResults_GPS = GPS_L1CA_acq(data_file_A, sample_offset, 8000, 1);
+acqResults_GPS = GPS_L1CA_acq(data_file_A, sample_offset, 12000, 1);
 svList_GPS = find(~isnan(acqResults_GPS(:,1)));
 acqResults_GPS(isnan(acqResults_GPS(:,1)),:) = [];
 svN_GPS = length(svList_GPS);
@@ -87,7 +87,7 @@ end
 
 %--通道输出存储空间
 m = msToProcess + 10;
-trackResults_GPS_A = struct('PRN',0, 'n',1, ...
+trackResults_GPS = struct('PRN',0, 'n',1, ...
 'dataIndex',    zeros(m,1), ...
 ...'remCodePhase', zeros(m,1), ... %可以不存，注释掉在前面加...
 'codeFreq',     zeros(m,1), ...
@@ -96,7 +96,8 @@ trackResults_GPS_A = struct('PRN',0, 'n',1, ...
 'I_Q',          zeros(m,6), ...
 'disc',         zeros(m,3), ...
 'std',          zeros(m,2));
-trackResults_GPS_A = repmat(trackResults_GPS_A, svN_GPS,1);
+trackResults_GPS_A = repmat(trackResults_GPS, svN_GPS,1);
+clearvars trackResults_GPS
 for k=1:svN_GPS
     trackResults_GPS_A(k).PRN = svList_GPS(k);
 end
@@ -181,7 +182,7 @@ for t=1:msToProcess
                 dn = mod(buffHead-channels_GPS_A{k}.trackDataTail+1, buffSize) - 1; %trackDataTail恰好超前buffHead一个时，dn=-1
                 dtc = dn / sampleFreq0; %当前采样时间与跟踪点的时间差
                 dt = dtc - dtp; %定位点到跟踪点的时间差
-                codePhase = channels_GPS_A{k}.remCodePhase + dt*channels_GPS_A{k}.codeNco; %定位点码相位
+                codePhase = channels_GPS_A{k}.remCodePhase + channels_GPS_A{k}.codeNco*dt; %定位点码相位
                 ts0 = [floor(channels_GPS_A{k}.ts0/1e3), mod(channels_GPS_A{k}.ts0,1e3), 0] + [0, floor(codePhase/1023), mod(codePhase/1023,1)*1e3]; %定位点的码发射时间
                 [sv_GPS_A(k,1:8),~] = GPS_L1CA_ephemeris_rho(channels_GPS_A{k}.ephemeris, tp, ts0); %根据星历计算卫星位置速度和伪距
                 sv_GPS_A(k,8) = -(channels_GPS_A{k}.carrFreq/1575.42e6 + deltaFreq) * 299792458; %载波频率转化为速度

@@ -95,7 +95,7 @@ end
 
 %--通道输出存储空间
 m = msToProcess + 10;
-trackResults_BDS_A = struct('PRN',0, 'n',1, ...
+trackResults_BDS = struct('PRN',0, 'n',1, ...
 'dataIndex',    zeros(m,1), ...
 ...'remCodePhase', zeros(m,1), ... %可以不存，注释掉在前面加...
 'codeFreq',     zeros(m,1), ...
@@ -104,7 +104,8 @@ trackResults_BDS_A = struct('PRN',0, 'n',1, ...
 'I_Q',          zeros(m,8), ...
 'disc',         zeros(m,2), ...
 'std',          zeros(m,2));
-trackResults_BDS_A = repmat(trackResults_BDS_A, svN_BDS,1);
+trackResults_BDS_A = repmat(trackResults_BDS, svN_BDS,1);
+clearvars trackResults_BDS
 for k=1:svN_BDS
     trackResults_BDS_A(k).PRN = svList_BDS(k);
 end
@@ -189,7 +190,7 @@ for t=1:msToProcess
                 dn = mod(buffHead-channels_BDS_A{k}.trackDataTail+1, buffSize) - 1;
                 dtc = dn / sampleFreq0;
                 dt = dtc - dtp;
-                codePhase = channels_BDS_A{k}.remCodePhase + dt*channels_BDS_A{k}.codeNco;
+                codePhase = channels_BDS_A{k}.remCodePhase + channels_BDS_A{k}.codeNco*dt;
                 ts0 = [floor(channels_BDS_A{k}.ts0/1e3), mod(channels_BDS_A{k}.ts0,1e3), 0] + [0, floor(codePhase/2046), mod(codePhase/2046,1)*1e3]; %北斗考虑子载波时码频率2.046e6Hz
                 [sv_BDS_A(k,1:8),~] = BDS_CNAV1_ephemeris_rho(channels_BDS_A{k}.ephemeris, tp, ts0);
                 sv_BDS_A(k,8) = -(channels_BDS_A{k}.carrFreq/1575.42e6 + deltaFreq) * 299792458;
